@@ -7,7 +7,7 @@ import {
   getTechnicians,
   resolveComplaint,
   updateTechnician,
-  getCustomerByPhone,
+  deleteComplaint,
 } from '../api';
 import Navbar from '../components/Navbar';
 import StatCard from '../components/StatCard';
@@ -141,6 +141,16 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDelete = async (complaintId) => {
+    if (!confirm('Are you sure you want to delete this complaint?')) return;
+    try {
+      await deleteComplaint(complaintId);
+      await refreshComplaints();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const renderActions = (c) => (
     <div className="flex flex-wrap gap-2">
       <Link
@@ -167,6 +177,13 @@ export default function AdminDashboard() {
         </button>
       )}
       <WhatsAppActionButton complaint={c} />
+      <button
+        type="button"
+        onClick={() => handleDelete(c._id)}
+        className="rounded-lg bg-red-100 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-200"
+      >
+        Delete
+      </button>
     </div>
   );
 

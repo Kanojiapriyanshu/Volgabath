@@ -218,6 +218,20 @@ router.put('/complaints/:id/resolve', authMiddleware, async (req, res) => {
   }
 });
 
+router.delete('/complaints/:id', authMiddleware, async (req, res) => {
+  try {
+    const complaint = await Complaint.findByIdAndDelete(req.params.id);
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    res.json({ message: 'Complaint deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.get('/customers', authMiddleware, async (req, res) => {
   try {
     const { search, phone } = req.query;

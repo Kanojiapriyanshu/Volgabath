@@ -6,6 +6,7 @@ import {
   getTechnicians,
   resolveComplaint,
   getCustomerByPhone,
+  deleteComplaint,
 } from '../api';
 import StatusBadge from '../components/StatusBadge';
 import { WhatsAppActionButton, ResolutionWhatsAppButton } from '../components/WhatsAppButton';
@@ -73,6 +74,16 @@ export default function AdminComplaintDetail() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this complaint?')) return;
+    try {
+      await deleteComplaint(id);
+      navigate('/admin/dashboard');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const formatDate = (d) =>
     new Date(d).toLocaleString('en-IN', {
       day: '2-digit',
@@ -118,15 +129,24 @@ export default function AdminComplaintDetail() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="border-b bg-white px-4 py-4 shadow-sm">
-        <div className="mx-auto flex max-w-4xl items-center gap-4">
-          <Link
-            to="/admin/dashboard"
-            className="text-sm font-medium text-gray-600 hover:text-navy"
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Link
+              to="/admin/dashboard"
+              className="text-sm font-medium text-gray-600 hover:text-navy"
+            >
+              ← Back
+            </Link>
+            <h1 className="font-heading text-lg font-bold text-navy">{complaint.complaintId}</h1>
+            <StatusBadge status={complaint.status} />
+          </div>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="rounded-lg bg-red-100 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-200"
           >
-            ← Back
-          </Link>
-          <h1 className="font-heading text-lg font-bold text-navy">{complaint.complaintId}</h1>
-          <StatusBadge status={complaint.status} />
+            Delete
+          </button>
         </div>
       </header>
 
