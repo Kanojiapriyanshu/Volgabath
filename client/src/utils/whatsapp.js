@@ -53,8 +53,6 @@ Status: Resolved
 
 Our technician has completed the required work. We hope the issue has been resolved to your satisfaction.
 
-If you have any further concerns or require additional assistance, please feel free to contact us.
-
 We would greatly appreciate your feedback. If you are satisfied with our service, kindly leave us a Google Review:
 
 ${GOOGLE_REVIEW_LINK}
