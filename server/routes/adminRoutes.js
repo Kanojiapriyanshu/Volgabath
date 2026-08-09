@@ -237,10 +237,10 @@ router.get('/customers', authMiddleware, async (req, res) => {
     const { search, phone } = req.query;
 
     if (phone) {
-      const cleanPhone = require('../utils/customerService.js').cleanPhone(phone);
-      const customer = await Customer.findOne({ phone: cleanPhone });
+      const cleanedPhone = cleanPhone(phone);
+      const customer = await Customer.findOne({ phone: cleanedPhone });
       if (customer) {
-        const complaints = await Complaint.find({ phone: cleanPhone }).sort({ createdAt: -1 });
+        const complaints = await Complaint.find({ phone: cleanedPhone }).sort({ createdAt: -1 });
         return res.json({ customer, complaints });
       }
       return res.json({ customer: null, complaints: [] });
@@ -260,8 +260,8 @@ router.get('/customers', authMiddleware, async (req, res) => {
 
 router.get('/customers/:phone/complaints', authMiddleware, async (req, res) => {
   try {
-    const cleanPhone = require('../utils/customerService.js').cleanPhone(req.params.phone);
-    const complaints = await Complaint.find({ phone: cleanPhone }).sort({ createdAt: -1 });
+    const cleanedPhone = cleanPhone(req.params.phone);
+    const complaints = await Complaint.find({ phone: cleanedPhone }).sort({ createdAt: -1 });
     res.json(complaints);
   } catch (err) {
     console.error(err);

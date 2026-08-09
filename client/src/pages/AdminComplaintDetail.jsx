@@ -319,10 +319,6 @@ export default function AdminComplaintDetail() {
                 <dd className="font-medium">{complaint.technicianId.name}</dd>
               </div>
               <div>
-                <dt className="text-gray-500">Phone</dt>
-                <dd className="font-medium">{complaint.technicianId.phone}</dd>
-              </div>
-              <div>
                 <dt className="text-gray-500">Service Area</dt>
                 <dd className="font-medium">{complaint.technicianId.serviceArea || '—'}</dd>
               </div>

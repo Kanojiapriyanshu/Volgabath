@@ -121,7 +121,7 @@ export default function HomePage() {
 
         {/* Footer */}
         <footer className="bg-navy px-5 py-10 text-center text-white">
-          <h3 className="font-heading text-xl font-bold">Volga Plumbing Services</h3>
+          <h3 className="font-heading text-xl font-bold">Volga Metal Industries</h3>
           <p className="mt-1 text-sm text-gray-300">Your trusted local plumbing partner</p>
           <p className="mt-4 font-medium text-orange">Emergency: {COMPANY_PHONE_DISPLAY}</p>
           <Link

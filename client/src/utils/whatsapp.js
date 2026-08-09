@@ -1,4 +1,4 @@
-export const COMPANY_NAME = 'Volga Plumbing Services';
+export const COMPANY_NAME = 'Volga Metal Industries';
 export const GOOGLE_REVIEW_LINK = 'https://g.page/r/CaMzETeAuL-8EBM/review';
 
 export function formatPhoneForWaMe(phone) {
@@ -15,10 +15,9 @@ export function openWhatsApp(phone, message) {
 }
 
 export function buildRegistrationMessage(customerName, complaintId) {
-  return `Dear ${customerName},
+  return `Dear sir,
 
-Thank you for contacting us.
-Your service request has been registered successfully.
+Thank you for contacting us. Your service request has been registered successfully.
 
 Complaint ID: ${complaintId}
 
@@ -28,13 +27,12 @@ Best Regards,
 ${COMPANY_NAME}`;
 }
 
-export function buildAssignmentMessage(customerName, technicianName, technicianPhone) {
-  return `Dear ${customerName},
+export function buildAssignmentMessage(customerName, technicianName) {
+  return `Dear sir,
 
 A technician has been assigned to your service request.
 
 Technician: ${technicianName}
-Contact: ${technicianPhone}
 
 He will contact you shortly.
 
@@ -43,21 +41,17 @@ ${COMPANY_NAME}`;
 }
 
 export function buildResolutionMessage(customerName, complaintId) {
-  return `Dear ${customerName},
+  return `Dear sir,
 
-We are pleased to inform you that your service request has been completed successfully.
+We are pleased to inform you that your service request has been completely resolved.
 
 Complaint ID: ${complaintId}
 
 Status: Resolved
 
-Our technician has completed the required work. We hope the issue has been resolved to your satisfaction.
-
-We would greatly appreciate your feedback. If you are satisfied with our service, kindly leave us a Google Review:
+Kindly leave us a Google review:
 
 ${GOOGLE_REVIEW_LINK}
-
-Thank you for choosing ${COMPANY_NAME}.
 
 Best Regards,
 ${COMPANY_NAME}`;
@@ -74,8 +68,7 @@ export function getMessageForComplaint(complaint) {
       phone,
       message: buildAssignmentMessage(
         customerName,
-        technicianId.name,
-        technicianId.phone
+        technicianId.name
       ),
     };
   }
