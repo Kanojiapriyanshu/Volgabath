@@ -163,13 +163,3 @@ export async function getCustomerComplaints(phone) {
   if (!res.ok) throw new Error(data.message || 'Failed to get customer complaints');
   return data;
 }
-
-export async function deleteComplaint(id) {
-  const res = await fetch(`${API_BASE}/admin/complaints/${id}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Failed to delete complaint');
-  return data;
-}
