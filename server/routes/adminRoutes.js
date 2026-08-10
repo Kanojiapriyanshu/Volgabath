@@ -232,43 +232,6 @@ router.delete('/complaints/:id', authMiddleware, async (req, res) => {
   }
 });
 
-router.get('/customers', authMiddleware, async (req, res) => {
-  try {
-    const { search, phone } = req.query;
-
-    if (phone) {
-      const cleanedPhone = cleanPhone(phone);
-      const customer = await Customer.findOne({ phone: cleanedPhone });
-      if (customer) {
-        const complaints = await Complaint.find({ phone: cleanedPhone }).sort({ createdAt: -1 });
-        return res.json({ customer, complaints });
-      }
-      return res.json({ customer: null, complaints: [] });
-    }
-
-    const query = search
-      ? { $text: { $search: search } }
-      : {};
-
-    const customers = await Customer.find(query).sort({ lastComplaintAt: -1 });
-    res.json(customers);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-router.get('/customers/:phone/complaints', authMiddleware, async (req, res) => {
-  try {
-    const cleanedPhone = cleanPhone(req.params.phone);
-    const complaints = await Complaint.find({ phone: cleanedPhone }).sort({ createdAt: -1 });
-    res.json(complaints);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
 router.use(uploadErrorHandler);
 
 export default router;

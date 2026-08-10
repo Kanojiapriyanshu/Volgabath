@@ -7,6 +7,7 @@ import {
   getTechnicians,
   resolveComplaint,
   updateTechnician,
+  getCustomerByPhone,
   deleteComplaint,
 } from '../api';
 import Navbar from '../components/Navbar';
