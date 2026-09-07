@@ -56,9 +56,17 @@ router.get('/complaints', authMiddleware, async (req, res) => {
       filter.createdAt = { $gte: start, $lte: end };
     }
 
-    if (search) {
-      const regex = new RegExp(search, 'i');
-      filter.$or = [{ customerName: regex }, { complaintId: regex }, { phone: regex }];
+    if (search?.trim()) {
+      const term = search.trim();
+      const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const textRegex = new RegExp(escaped, 'i');
+      const or = [{ customerName: textRegex }, { complaintId: textRegex }];
+
+      const digits = term.replace(/\D/g, '');
+      if (digits) or.push({ phone: new RegExp(digits, 'i') });
+      else or.push({ phone: textRegex });
+
+      filter.$or = or;
     }
 
     const complaints = await Complaint.find(filter)
