@@ -1,6 +1,6 @@
 # Plumbing & Sanitary Complaint Management System
 
-Mobile-first full-stack web app for registering plumbing complaints, admin management, technician assignment, and WhatsApp notifications via Twilio.
+Mobile-first full-stack web app for registering plumbing complaints, admin management, technician assignment, and **free WhatsApp messaging** via `wa.me` deep links.
 
 ## Tech Stack
 
@@ -9,7 +9,7 @@ Mobile-first full-stack web app for registering plumbing complaints, admin manag
 - **Database:** MongoDB + Mongoose
 - **Auth:** JWT (admin only)
 - **Uploads:** Multer (`/uploads`)
-- **WhatsApp:** Twilio WhatsApp API (falls back to console logs if not configured)
+- **WhatsApp:** `wa.me` links — opens WhatsApp Web/App with pre-filled message (₹0 cost)
 
 ## Project Structure
 
@@ -60,12 +60,17 @@ Edit `server/.env`:
 | `PORT` | API port (default 5000) |
 | `MONGODB_URI` | MongoDB connection string |
 | `JWT_SECRET` | Secret for JWT signing |
-| `TWILIO_ACCOUNT_SID` | Twilio account SID |
-| `TWILIO_AUTH_TOKEN` | Twilio auth token |
-| `TWILIO_WHATSAPP_FROM` | e.g. `whatsapp:+14155238886` |
-| `GOOGLE_REVIEW_LINK` | Google review URL for resolution message |
 
-If Twilio credentials are missing or placeholders, WhatsApp messages are logged to the server console instead.
+Google Review link and WhatsApp message templates are configured in `client/src/utils/whatsapp.js`.
+
+## WhatsApp Flow (Free)
+
+1. Customer submits complaint → appears in admin dashboard
+2. Admin assigns technician / marks resolved
+3. Admin clicks **Send WhatsApp** → `https://wa.me/91XXXXXXXXXX?text=...` opens
+4. Admin reviews the pre-filled message and presses **Send**
+
+No Twilio or paid SMS/WhatsApp API required.
 
 ## API Overview
 
