@@ -3,11 +3,16 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import Complaint from '../models/Complaint.js';
 import Admin from '../models/Admin.js';
+import Customer from '../models/Customer.js';
+import Technician from '../models/Technician.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import {
   sendAssignmentMessage,
   sendResolutionMessage,
 } from '../services/whatsappService.js';
+import { generateComplaintId } from '../utils/complaintId.js';
+import { upsertCustomer, cleanPhone, PHONE_REGEX } from '../utils/customerService.js';
+import { upload, uploadErrorHandler } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -41,6 +46,96 @@ router.post('/login', async (req, res) => {
   }
 });
 
+router.post('/complaints', authMiddleware, upload.single('photo'), async (req, res) => {
+  try {
+    const {
+      customerId,
+      customerName,
+      phone,
+      category,
+      address,
+      description,
+      technicianId,
+    } = req.body;
+
+    let name = customerName?.trim();
+    let customerPhone = cleanPhone(phone);
+    let customerAddress = address?.trim();
+
+    if (customerId) {
+      const existing = await Customer.findById(customerId);
+      if (!existing) {
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+      name = name || existing.name;
+      customerPhone = existing.phone;
+      customerAddress = customerAddress || existing.address || '';
+    }
+
+    if (!name) {
+      return res.status(400).json({ message: 'Customer name is required' });
+    }
+
+    if (!PHONE_REGEX.test(customerPhone)) {
+      return res.status(400).json({ message: 'Valid 10-digit Indian mobile number is required' });
+    }
+
+    let technician = null;
+    if (technicianId) {
+      technician = await Technician.findById(technicianId);
+      if (!technician) {
+        return res.status(404).json({ message: 'Technician not found' });
+      }
+    }
+
+    const photo = req.file ? `/uploads/${req.file.filename}` : undefined;
+
+    await upsertCustomer({
+      name,
+      phone: customerPhone,
+      address: customerAddress,
+    });
+
+    let complaint;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const complaintId = await generateComplaintId();
+      try {
+        complaint = await Complaint.create({
+          complaintId,
+          customerName: name,
+          phone: customerPhone,
+          category: category || 'Other',
+          address: customerAddress,
+          description: description?.trim(),
+          photo,
+          status: technician ? 'Technician Assigned' : 'New Request',
+          ...(technician ? { technicianId: technician._id } : {}),
+        });
+        break;
+      } catch (err) {
+        const isDupComplaintId = err.code === 11000 && err.keyPattern?.complaintId;
+        if (!isDupComplaintId || attempt === 4) throw err;
+      }
+    }
+
+    await complaint.populate('technicianId', 'name phone serviceArea');
+
+    if (technician) {
+      sendAssignmentMessage(
+        complaint.customerName,
+        complaint.phone,
+        technician.name,
+        technician.phone
+      ).catch(console.error);
+    }
+
+    res.status(201).json(complaint);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.get('/complaints', authMiddleware, async (req, res) => {
   try {
     const { status, date, search } = req.query;
@@ -62,8 +157,9 @@ router.get('/complaints', authMiddleware, async (req, res) => {
       const textRegex = new RegExp(escaped, 'i');
       const or = [{ customerName: textRegex }, { complaintId: textRegex }];
 
-      const digits = term.replace(/\D/g, '');
-      if (digits) or.push({ phone: new RegExp(digits, 'i') });
+      let digits = term.replace(/\D/g, '');
+      if (digits.length > 10) digits = digits.slice(-10);
+      if (digits) or.push({ phone: new RegExp(digits) });
       else or.push({ phone: textRegex });
 
       filter.$or = or;
@@ -166,5 +262,21 @@ router.put('/complaints/:id/resolve', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+router.delete('/complaints/:id', authMiddleware, async (req, res) => {
+  try {
+    const complaint = await Complaint.findByIdAndDelete(req.params.id);
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    res.json({ message: 'Complaint deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.use(uploadErrorHandler);
 
 export default router;

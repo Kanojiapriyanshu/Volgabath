@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   addTechnician,
+  deleteComplaint,
   deleteTechnician,
+  getAllCustomers,
   getComplaints,
   getTechnicians,
   updateTechnician,
@@ -10,6 +12,8 @@ import {
 import Navbar from '../components/Navbar';
 import StatCard from '../components/StatCard';
 import StatusBadge from '../components/StatusBadge';
+import { WhatsAppActionButton } from '../components/WhatsAppButton';
+import AdminManualComplaintForm from '../components/AdminManualComplaintForm';
 
 const STATUS_OPTIONS = ['', 'New Request', 'Technician Assigned', 'Resolved'];
 
@@ -24,6 +28,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [techForm, setTechForm] = useState({ name: '', phone: '', serviceArea: '' });
   const [techError, setTechError] = useState('');
+  const [customerData, setCustomerData] = useState({});
 
   const loadComplaints = useCallback(async () => {
     const params = {};
@@ -39,11 +44,22 @@ export default function AdminDashboard() {
     setTechnicians(data);
   };
 
+  const loadCustomerData = async () => {
+    try {
+      const customers = await getAllCustomers();
+      const customerMap = {};
+      for (const c of customers) customerMap[c.phone] = c;
+      setCustomerData(customerMap);
+    } catch (err) {
+      console.error('Error loading customer data', err);
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       setLoading(true);
       try {
-        const [all] = await Promise.all([getComplaints(), loadTechnicians()]);
+        const [all] = await Promise.all([getComplaints(), loadTechnicians(), loadCustomerData()]);
         setAllComplaints(all);
         await loadComplaints();
       } catch (err) {
@@ -99,6 +115,23 @@ export default function AdminDashboard() {
     try {
       await deleteTechnician(id);
       await loadTechnicians();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const refreshComplaints = async () => {
+    await loadComplaints();
+    const all = await getComplaints();
+    setAllComplaints(all);
+    await loadCustomerData();
+  };
+
+  const handleDeleteComplaint = async (id) => {
+    if (!confirm('Are you sure you want to delete this complaint?')) return;
+    try {
+      await deleteComplaint(id);
+      await refreshComplaints();
     } catch (err) {
       alert(err.message);
     }
@@ -193,7 +226,16 @@ export default function AdminDashboard() {
                         complaints.map((c) => (
                           <tr key={c._id} className="hover:bg-gray-50">
                             <td className="px-4 py-3 font-medium text-navy">{c.complaintId}</td>
-                            <td className="px-4 py-3">{c.customerName}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                {c.customerName}
+                                {customerData[c.phone]?.complaintCount > 0 && (
+                                  <span className="rounded-full bg-orange/10 px-2 py-0.5 text-xs text-orange">
+                                    {customerData[c.phone].complaintCount}x
+                                  </span>
+                                )}
+                              </div>
+                            </td>
                             <td className="px-4 py-3">{c.phone}</td>
                             <td className="px-4 py-3">{c.category}</td>
                             <td className="px-4 py-3">
@@ -201,12 +243,22 @@ export default function AdminDashboard() {
                             </td>
                             <td className="px-4 py-3">{formatDate(c.createdAt)}</td>
                             <td className="px-4 py-3">
-                              <Link
-                                to={`/admin/complaints/${c._id}`}
-                                className="rounded-lg bg-orange/10 px-3 py-1.5 text-sm font-medium text-orange hover:bg-orange/20"
-                              >
-                                View
-                              </Link>
+                              <div className="flex flex-wrap gap-2">
+                                <Link
+                                  to={`/admin/complaints/${c._id}`}
+                                  className="rounded-lg bg-orange/10 px-3 py-1.5 text-sm font-medium text-orange hover:bg-orange/20"
+                                >
+                                  View
+                                </Link>
+                                <WhatsAppActionButton complaint={c} />
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteComplaint(c._id)}
+                                  className="rounded-lg bg-red-100 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-200"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -223,19 +275,36 @@ export default function AdminDashboard() {
                     complaints.map((c) => (
                       <div key={c._id} className="rounded-xl bg-white p-4 shadow-sm">
                         <div className="flex items-start justify-between">
-                          <span className="font-medium text-navy">{c.complaintId}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-navy">{c.complaintId}</span>
+                            {customerData[c.phone]?.complaintCount > 0 && (
+                              <span className="rounded-full bg-orange/10 px-2 py-0.5 text-xs text-orange">
+                                {customerData[c.phone].complaintCount}x
+                              </span>
+                            )}
+                          </div>
                           <StatusBadge status={c.status} />
                         </div>
                         <p className="mt-2 font-medium">{c.customerName}</p>
                         <p className="text-sm text-gray-500">{c.phone}</p>
                         <p className="mt-1 text-sm text-gray-600">{c.category}</p>
                         <p className="text-xs text-gray-400">{formatDate(c.createdAt)}</p>
-                        <Link
-                          to={`/admin/complaints/${c._id}`}
-                          className="mt-3 inline-block rounded-lg bg-orange px-4 py-2 text-sm font-medium text-white"
-                        >
-                          View Details
-                        </Link>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Link
+                            to={`/admin/complaints/${c._id}`}
+                            className="inline-block rounded-lg bg-orange px-4 py-2 text-sm font-medium text-white"
+                          >
+                            View Details
+                          </Link>
+                          <WhatsAppActionButton complaint={c} />
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteComplaint(c._id)}
+                            className="rounded-lg bg-red-100 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-200"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -243,6 +312,23 @@ export default function AdminDashboard() {
               </>
             )}
           </>
+        )}
+
+        {activeTab === 'add-complaint' && (
+          <div className="mx-auto max-w-2xl">
+            <div className="mb-6">
+              <h2 className="font-heading text-xl font-bold text-navy">
+                Register Phone / Manual Complaint
+              </h2>
+              <p className="mt-1 text-sm text-gray-600">
+                For complaints received by phone. Search recurring customers or add a new one.
+                Technician assignment is optional.
+              </p>
+            </div>
+            <div className="rounded-xl bg-white p-6 shadow-sm">
+              <AdminManualComplaintForm technicians={technicians} onSuccess={refreshComplaints} />
+            </div>
+          </div>
         )}
 
         {activeTab === 'technicians' && (

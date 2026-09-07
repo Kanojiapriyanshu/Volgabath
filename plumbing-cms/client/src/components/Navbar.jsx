@@ -46,6 +46,17 @@ export default function Navbar({ activeTab, onTabChange }) {
           </button>
           <button
             type="button"
+            onClick={() => onTabChange('add-complaint')}
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+              activeTab === 'add-complaint'
+                ? 'bg-navy text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            Add Complaint
+          </button>
+          <button
+            type="button"
             onClick={() => onTabChange('technicians')}
             className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
               activeTab === 'technicians'

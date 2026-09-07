@@ -9,6 +9,7 @@ import fs from 'fs';
 import complaintRoutes from './routes/complaintRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import technicianRoutes from './routes/technicianRoutes.js';
+import customerRoutes from './routes/customerRoutes.js';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use('/uploads', express.static(uploadsDir));
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/technicians', technicianRoutes);
+app.use('/api/admin/customers', customerRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });

@@ -1,6 +1,8 @@
 import express from 'express';
 import Customer from '../models/Customer.js';
+import Complaint from '../models/Complaint.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
+import { cleanPhone } from '../utils/customerService.js';
 
 const router = express.Router();
 
@@ -8,7 +10,23 @@ router.use(authMiddleware);
 
 router.get('/', async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, phone, all } = req.query;
+
+    if (all === 'true') {
+      const customers = await Customer.find().sort({ lastComplaintAt: -1 }).lean();
+      return res.json(customers);
+    }
+
+    if (phone) {
+      const cleanedPhone = cleanPhone(phone);
+      const customer = await Customer.findOne({ phone: cleanedPhone });
+      if (customer) {
+        const complaints = await Complaint.find({ phone: cleanedPhone }).sort({ createdAt: -1 });
+        return res.json({ customer, complaints });
+      }
+      return res.json({ customer: null, complaints: [] });
+    }
+
     const filter = {};
 
     if (search?.trim()) {
@@ -17,8 +35,9 @@ router.get('/', async (req, res) => {
       const nameRegex = new RegExp(escaped, 'i');
       const or = [{ name: nameRegex }];
 
-      const digits = term.replace(/\D/g, '');
-      or.push({ phone: digits ? new RegExp(digits, 'i') : nameRegex });
+      let digits = term.replace(/\D/g, '');
+      if (digits.length > 10) digits = digits.slice(-10);
+      or.push({ phone: digits ? new RegExp(digits) : nameRegex });
 
       filter.$or = or;
     }

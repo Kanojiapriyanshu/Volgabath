@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   assignTechnician,
+  deleteComplaint,
   getComplaint,
+  getCustomerByPhone,
   getTechnicians,
   resolveComplaint,
 } from '../api';
 import StatusBadge from '../components/StatusBadge';
+import { WhatsAppActionButton, ResolutionWhatsAppButton } from '../components/WhatsAppButton';
 
 export default function AdminComplaintDetail() {
   const { id } = useParams();
@@ -17,12 +20,18 @@ export default function AdminComplaintDetail() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
+  const [customerInfo, setCustomerInfo] = useState(null);
 
   const load = async () => {
     try {
       const [c, t] = await Promise.all([getComplaint(id), getTechnicians()]);
       setComplaint(c);
       setTechnicians(t.filter((tech) => tech.isAvailable));
+
+      if (c?.phone) {
+        const data = await getCustomerByPhone(c.phone);
+        setCustomerInfo(data);
+      }
     } catch (err) {
       if (err.message === 'Unauthorized' || err.message?.includes('token')) {
         navigate('/admin/login');
@@ -62,6 +71,16 @@ export default function AdminComplaintDetail() {
       setError(err.message);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this complaint?')) return;
+    try {
+      await deleteComplaint(id);
+      navigate('/admin/dashboard');
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -110,15 +129,24 @@ export default function AdminComplaintDetail() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="border-b bg-white px-4 py-4 shadow-sm">
-        <div className="mx-auto flex max-w-4xl items-center gap-4">
-          <Link
-            to="/admin/dashboard"
-            className="text-sm font-medium text-gray-600 hover:text-navy"
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Link
+              to="/admin/dashboard"
+              className="text-sm font-medium text-gray-600 hover:text-navy"
+            >
+              ← Back
+            </Link>
+            <h1 className="font-heading text-lg font-bold text-navy">{complaint.complaintId}</h1>
+            <StatusBadge status={complaint.status} />
+          </div>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="rounded-lg bg-red-100 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-200"
           >
-            ← Back
-          </Link>
-          <h1 className="font-heading text-lg font-bold text-navy">{complaint.complaintId}</h1>
-          <StatusBadge status={complaint.status} />
+            Delete
+          </button>
         </div>
       </header>
 
@@ -128,14 +156,37 @@ export default function AdminComplaintDetail() {
         )}
 
         {complaint.status === 'Resolved' && (
-          <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center font-semibold text-green-800">
-            ✅ This complaint has been resolved
+          <div className="space-y-4">
+            <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center font-semibold text-green-800">
+              ✅ This complaint has been resolved
+            </div>
+            <div className="rounded-xl border border-green-200 bg-white p-6 text-center shadow-sm">
+              <p className="mb-4 text-sm text-gray-600">
+                Send the resolution message via WhatsApp — the message is pre-filled. You only
+                need to press Send.
+              </p>
+              <ResolutionWhatsAppButton complaint={complaint} />
+            </div>
           </div>
         )}
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <section className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="grid gap-6 md:grid-cols-3">
+          <section className="rounded-xl bg-white p-6 shadow-sm md:col-span-1">
             <h2 className="font-heading font-semibold text-navy">Customer Details</h2>
+            {customerInfo?.customer && (
+              <div className="mb-4 mt-4 rounded-lg border border-orange/20 bg-orange/5 p-3">
+                <p className="text-sm font-medium text-orange">
+                  {customerInfo.customer.complaintCount > 0
+                    ? `Repeat Customer (${customerInfo.customer.complaintCount} complaints)`
+                    : 'Existing Customer'}
+                </p>
+                {customerInfo.customer.lastComplaintAt && (
+                  <p className="mt-1 text-xs text-gray-600">
+                    Last complaint: {formatDate(customerInfo.customer.lastComplaintAt)}
+                  </p>
+                )}
+              </div>
+            )}
             <dl className="mt-4 space-y-3 text-sm">
               <div>
                 <dt className="text-gray-500">Name</dt>
@@ -164,7 +215,31 @@ export default function AdminComplaintDetail() {
             </dl>
           </section>
 
-          <section className="rounded-xl bg-white p-6 shadow-sm">
+          <section className="rounded-xl bg-white p-6 shadow-sm md:col-span-1">
+            <h2 className="font-heading font-semibold text-navy">Customer History</h2>
+            {customerInfo?.complaints?.length > 0 ? (
+              <ul className="mt-4 max-h-80 space-y-3 overflow-y-auto">
+                {customerInfo.complaints.map((c) => (
+                  <li key={c._id} className="border-l-2 border-gray-200 pl-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-navy">{c.complaintId}</span>
+                      <StatusBadge status={c.status} />
+                    </div>
+                    <p className="mt-1 text-xs text-gray-600">
+                      {c.category} · {formatDate(c.createdAt)}
+                    </p>
+                    {c.description && (
+                      <p className="mt-1 text-xs text-gray-500">{c.description}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-4 text-sm text-gray-500">No prior complaints</p>
+            )}
+          </section>
+
+          <section className="rounded-xl bg-white p-6 shadow-sm md:col-span-1">
             <h2 className="font-heading font-semibold text-navy">Status Timeline</h2>
             <ol className="mt-4 space-y-4">
               {timeline.map((step, i) => (
@@ -251,6 +326,18 @@ export default function AdminComplaintDetail() {
             >
               {actionLoading ? 'Updating...' : 'Mark as Resolved'}
             </button>
+          </section>
+        )}
+
+        {complaint.status !== 'Resolved' && (
+          <section className="rounded-xl border border-[#25D366]/30 bg-[#25D366]/5 p-6">
+            <h2 className="font-heading font-semibold text-navy">WhatsApp Message</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Opens WhatsApp Web or the app with a pre-filled message. Review and press Send.
+            </p>
+            <div className="mt-4">
+              <WhatsAppActionButton complaint={complaint} className="px-6 py-3" />
+            </div>
           </section>
         )}
       </main>

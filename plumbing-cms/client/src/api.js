@@ -73,6 +73,56 @@ export async function resolveComplaint(complaintId) {
   return data;
 }
 
+export async function getAllCustomers() {
+  const res = await fetch(`${API_BASE}/admin/customers?all=true`, {
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to fetch customers');
+  return data;
+}
+
+export async function searchCustomers(search = '') {
+  const qs = search ? `?search=${encodeURIComponent(search)}` : '';
+  const res = await fetch(`${API_BASE}/admin/customers${qs}`, {
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to search customers');
+  return data;
+}
+
+export async function getCustomerByPhone(phone) {
+  const qs = `?phone=${encodeURIComponent(phone)}`;
+  const res = await fetch(`${API_BASE}/admin/customers${qs}`, {
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to get customer');
+  return data;
+}
+
+export async function createAdminComplaint(formData) {
+  const res = await fetch(`${API_BASE}/admin/complaints`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: formData,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to create complaint');
+  return data;
+}
+
+export async function deleteComplaint(id) {
+  const res = await fetch(`${API_BASE}/admin/complaints/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to delete complaint');
+  return data;
+}
+
 export async function getTechnicians() {
   const res = await fetch(`${API_BASE}/admin/technicians`, {
     headers: getAuthHeaders(),
