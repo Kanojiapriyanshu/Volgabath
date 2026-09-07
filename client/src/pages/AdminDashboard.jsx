@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom';
 import {
   addTechnician,
   deleteTechnician,
+  getAllCustomers,
   getComplaints,
   getTechnicians,
   resolveComplaint,
   updateTechnician,
-  getCustomerByPhone,
   deleteComplaint,
 } from '../api';
 import Navbar from '../components/Navbar';
@@ -45,33 +45,24 @@ export default function AdminDashboard() {
     setTechnicians(data);
   };
 
-  const loadCustomerData = async (phoneNumbers) => {
-    const customerMap = {};
-    await Promise.all(
-      phoneNumbers.map(async (phone) => {
-        try {
-          const data = await getCustomerByPhone(phone);
-          if (data.customer) {
-            customerMap[phone] = data.customer;
-          }
-        } catch (err) {
-          console.error('Error loading customer data for', phone, err);
-        }
-      })
-    );
-    setCustomerData(customerMap);
+  const loadCustomerData = async () => {
+    try {
+      const customers = await getAllCustomers();
+      const customerMap = {};
+      for (const c of customers) customerMap[c.phone] = c;
+      setCustomerData(customerMap);
+    } catch (err) {
+      console.error('Error loading customer data', err);
+    }
   };
 
   useEffect(() => {
     const init = async () => {
       setLoading(true);
       try {
-        const [all] = await Promise.all([getComplaints(), loadTechnicians()]);
+        const [all] = await Promise.all([getComplaints(), loadTechnicians(), loadCustomerData()]);
         setAllComplaints(all);
         await loadComplaints();
-        
-        const uniquePhones = [...new Set(all.map(c => c.phone))];
-        await loadCustomerData(uniquePhones);
       } catch (err) {
         console.error(err);
       } finally {
@@ -127,9 +118,7 @@ export default function AdminDashboard() {
     await loadComplaints();
     const all = await getComplaints();
     setAllComplaints(all);
-    
-    const uniquePhones = [...new Set(all.map(c => c.phone))];
-    await loadCustomerData(uniquePhones);
+    await loadCustomerData();
   };
 
   const handleResolve = async (complaintId) => {

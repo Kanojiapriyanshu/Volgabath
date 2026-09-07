@@ -10,7 +10,12 @@ router.use(authMiddleware);
 
 router.get('/', async (req, res) => {
   try {
-    const { search, phone } = req.query;
+    const { search, phone, all } = req.query;
+
+    if (all === 'true') {
+      const customers = await Customer.find().sort({ lastComplaintAt: -1 }).lean();
+      return res.json(customers);
+    }
 
     if (phone) {
       const cleanedPhone = cleanPhone(phone);
@@ -25,8 +30,16 @@ router.get('/', async (req, res) => {
     const filter = {};
 
     if (search?.trim()) {
-      const regex = new RegExp(search.trim(), 'i');
-      filter.$or = [{ name: regex }, { phone: regex }];
+      const term = search.trim();
+      const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const nameRegex = new RegExp(escaped, 'i');
+      const or = [{ name: nameRegex }];
+
+      let digits = term.replace(/\D/g, '');
+      if (digits.length > 10) digits = digits.slice(-10);
+      or.push({ phone: digits ? new RegExp(digits) : nameRegex });
+
+      filter.$or = or;
     }
 
     const customers = await Customer.find(filter)

@@ -114,6 +114,15 @@ export async function deleteTechnician(id) {
   return data;
 }
 
+export async function getAllCustomers() {
+  const res = await fetch(`${API_BASE}/admin/customers?all=true`, {
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Failed to fetch customers');
+  return data;
+}
+
 export async function searchCustomers(search = '') {
   const qs = search ? `?search=${encodeURIComponent(search)}` : '';
   const res = await fetch(`${API_BASE}/admin/customers${qs}`, {

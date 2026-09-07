@@ -84,7 +84,6 @@ router.post('/complaints', authMiddleware, upload.single('photo'), async (req, r
       }
     }
 
-    const complaintId = await generateComplaintId();
     const photo = req.file ? `/uploads/${req.file.filename}` : undefined;
 
     await upsertCustomer({
@@ -93,17 +92,27 @@ router.post('/complaints', authMiddleware, upload.single('photo'), async (req, r
       address: customerAddress,
     });
 
-    const complaint = await Complaint.create({
-      complaintId,
-      customerName: name,
-      phone: customerPhone,
-      category: category || 'Other',
-      address: customerAddress,
-      description: description?.trim(),
-      photo,
-      status: technician ? 'Technician Assigned' : 'New Request',
-      ...(technician ? { technicianId: technician._id } : {}),
-    });
+    let complaint;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const complaintId = await generateComplaintId();
+      try {
+        complaint = await Complaint.create({
+          complaintId,
+          customerName: name,
+          phone: customerPhone,
+          category: category || 'Other',
+          address: customerAddress,
+          description: description?.trim(),
+          photo,
+          status: technician ? 'Technician Assigned' : 'New Request',
+          ...(technician ? { technicianId: technician._id } : {}),
+        });
+        break;
+      } catch (err) {
+        const isDupComplaintId = err.code === 11000 && err.keyPattern?.complaintId;
+        if (!isDupComplaintId || attempt === 4) throw err;
+      }
+    }
 
     await complaint.populate('technicianId', 'name phone serviceArea');
 
@@ -129,9 +138,18 @@ router.get('/complaints', authMiddleware, async (req, res) => {
       filter.createdAt = { $gte: start, $lte: end };
     }
 
-    if (search) {
-      const regex = new RegExp(search, 'i');
-      filter.$or = [{ customerName: regex }, { complaintId: regex }, { phone: regex }];
+    if (search?.trim()) {
+      const term = search.trim();
+      const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const textRegex = new RegExp(escaped, 'i');
+      const or = [{ customerName: textRegex }, { complaintId: textRegex }];
+
+      let digits = term.replace(/\D/g, '');
+      if (digits.length > 10) digits = digits.slice(-10);
+      if (digits) or.push({ phone: new RegExp(digits) });
+      else or.push({ phone: textRegex });
+
+      filter.$or = or;
     }
 
     const complaints = await Complaint.find(filter)
