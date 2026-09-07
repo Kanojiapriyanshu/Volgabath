@@ -43,18 +43,27 @@ router.post('/', upload.single('photo'), async (req, res) => {
       return res.status(400).json({ message: 'Valid 10-digit Indian mobile number is required' });
     }
 
-    const complaintId = await generateComplaintId();
     const photo = req.file ? `/uploads/${req.file.filename}` : undefined;
 
-    const complaint = await Complaint.create({
-      complaintId,
-      customerName: customerName.trim(),
-      phone: cleanPhone,
-      category: category || 'Other',
-      address: address?.trim(),
-      description: description?.trim(),
-      photo,
-    });
+    let complaint;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const complaintId = await generateComplaintId();
+      try {
+        complaint = await Complaint.create({
+          complaintId,
+          customerName: customerName.trim(),
+          phone: cleanPhone,
+          category: category || 'Other',
+          address: address?.trim(),
+          description: description?.trim(),
+          photo,
+        });
+        break;
+      } catch (err) {
+        const isDupComplaintId = err.code === 11000 && err.keyPattern?.complaintId;
+        if (!isDupComplaintId || attempt === 4) throw err;
+      }
+    }
 
     sendRegistrationMessage(complaint.customerName, complaint.phone, complaint.complaintId).catch(
       console.error
